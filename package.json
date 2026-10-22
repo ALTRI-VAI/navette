@@ -1,0 +1,11 @@
+{
+  "name": "navette",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NAVETTE – inscription quotidienne à la navette d'entreprise",
+  "scripts": {
+    "test": "node --test tests/backend.test.js",
+    "test:interface": "node --test tests/interface.test.js",
+    "local": "node tests/serveur-local.js 8080"
+  }
+}

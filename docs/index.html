@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NAVETTE</title>
+  <meta name="description" content="Inscription quotidienne à la navette">
+  <meta name="theme-color" content="#0a5cad">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icone.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icone-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="entete">
+    <div class="entete-int">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7h12l5 4h2a1 1 0 0 1 1 1v4h-2"/><path d="M2 7v9h2"/><path d="M9 16h6"/><path d="M2 11h17"/><circle cx="6.5" cy="16.5" r="2"/><circle cx="17.5" cy="16.5" r="2"/></svg>
+        NAVETTE
+      </div>
+    </div>
+  </header>
+
+  <main class="contenu">
+    <div id="bandeau" class="bandeau" role="alert" hidden></div>
+
+    <section class="bonjour" aria-live="polite">
+      <span id="bonjour-texte">Bonjour !</span>
+      <button type="button" class="lien" id="btn-prenom">Indiquer mon prénom</button>
+    </section>
+
+    <div id="demis" class="demis">
+      <div class="squelette"></div>
+      <div class="squelette"></div>
+    </div>
+  </main>
+
+  <footer class="pied" id="pied-version"></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="dialogue-prenom" aria-labelledby="prenom-titre">
+    <form method="dialog" id="form-prenom">
+      <h2 id="prenom-titre">Votre prénom</h2>
+      <p class="aide">Il est retenu sur cet appareil : vous n'aurez plus à le retaper.</p>
+      <label for="champ-prenom">Prénom</label>
+      <input type="text" id="champ-prenom" maxlength="30" autocomplete="given-name" autocapitalize="words" enterkeyhint="done">
+      <div class="erreur-champ" id="erreur-prenom"></div>
+      <div class="actions">
+        <button type="button" class="btn btn-secondaire" id="prenom-annuler">Annuler</button>
+        <button type="submit" class="btn btn-primaire">Valider</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogue-confirmation" aria-labelledby="confirmation-texte">
+    <p id="confirmation-texte"></p>
+    <div class="actions">
+      <button type="button" class="btn btn-secondaire" id="confirmation-non">Non</button>
+      <button type="button" class="btn btn-danger" id="confirmation-oui">Oui</button>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="commun.js"></script>
+  <script src="accueil.js"></script>
+</body>
+</html>

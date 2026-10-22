@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NAVETTE – Administration</title>
+  <meta name="theme-color" content="#0a5cad">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="icons/icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="entete">
+    <div class="entete-int">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7h12l5 4h2a1 1 0 0 1 1 1v4h-2"/><path d="M2 7v9h2"/><path d="M9 16h6"/><path d="M2 11h17"/><circle cx="6.5" cy="16.5" r="2"/><circle cx="17.5" cy="16.5" r="2"/></svg>
+        NAVETTE
+      </div>
+      <span class="role">Administration</span>
+    </div>
+  </header>
+
+  <main class="contenu">
+    <div id="bandeau" class="bandeau" role="alert" hidden></div>
+
+    <form id="connexion" class="carte connexion" hidden>
+      <h2>Accès administrateur</h2>
+      <label for="champ-pin">Code</label>
+      <input type="password" id="champ-pin" inputmode="numeric" autocomplete="current-password" maxlength="8">
+      <div class="erreur-champ" id="erreur-pin"></div>
+      <button type="submit" class="btn btn-primaire btn-plein">Valider</button>
+    </form>
+
+    <div id="vue" hidden>
+      <nav class="onglets" role="tablist" aria-label="Sections">
+        <button type="button" role="tab" data-onglet="inscriptions" aria-selected="true">Inscriptions</button>
+        <button type="button" role="tab" data-onglet="creneaux" aria-selected="false">Créneaux</button>
+        <button type="button" role="tab" data-onglet="fermetures" aria-selected="false">Fermetures</button>
+        <button type="button" role="tab" data-onglet="stats" aria-selected="false">Statistiques</button>
+        <button type="button" role="tab" data-onglet="journal" aria-selected="false">Journal</button>
+        <button type="button" role="tab" data-onglet="reglages" aria-selected="false">Réglages</button>
+      </nav>
+
+      <section id="p-inscriptions" role="tabpanel"><div id="demis" class="demis"></div></section>
+
+      <section id="p-creneaux" role="tabpanel" hidden>
+        <div class="section carte">
+          <h2>Créneaux existants</h2>
+          <p class="aide">Décocher « actif » masque le créneau sans perdre son historique.</p>
+          <div id="liste-creneaux"></div>
+        </div>
+        <form class="section carte" id="form-creneau">
+          <h2>Ajouter un créneau</h2>
+          <div class="grille-form">
+            <div><label for="nc-demi">Demi-journée</label>
+              <select id="nc-demi"><option value="MATIN">Matin</option><option value="SOIR">Soir</option></select></div>
+            <div><label for="nc-heure">Heure</label><input type="time" id="nc-heure" required></div>
+            <div><label for="nc-cap">Places</label><input type="number" id="nc-cap" min="1" max="50" value="8" required></div>
+          </div>
+          <p><button type="submit" class="btn btn-primaire">Ajouter</button></p>
+        </form>
+      </section>
+
+      <section id="p-fermetures" role="tabpanel" hidden>
+        <form class="section carte" id="form-fermeture">
+          <h2>Fermer une journée</h2>
+          <p class="aide">Pont, fermeture du site… La journée sera sautée comme un week-end.</p>
+          <div class="grille-form">
+            <div><label for="nf-date">Date</label><input type="date" id="nf-date" required></div>
+            <div><label for="nf-motif">Motif</label><input type="text" id="nf-motif" maxlength="60" placeholder="Pont de l'Ascension"></div>
+            <div><button type="submit" class="btn btn-primaire btn-plein">Ajouter</button></div>
+          </div>
+        </form>
+        <div class="section carte"><h2>Fermetures ajoutées</h2><ul class="liste-simple" id="liste-fermetures"></ul></div>
+        <div class="section carte"><h2>Jours fériés (automatiques)</h2><ul class="liste-simple" id="liste-feries"></ul></div>
+      </section>
+
+      <section id="p-stats" role="tabpanel" hidden><div id="stats"></div></section>
+
+      <section id="p-journal" role="tabpanel" hidden>
+        <div class="carte">
+          <p class="aide">Actions des 7 derniers jours (les noms sont ensuite effacés automatiquement).</p>
+          <div class="tableau-wrap"><table class="journal">
+            <thead><tr><th>Quand</th><th>Action</th><th>Créneau</th><th>Nom</th><th>Par</th><th>Détail</th></tr></thead>
+            <tbody id="journal"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <section id="p-reglages" role="tabpanel" hidden>
+        <form class="section carte" id="form-reglages">
+          <h2>Bascule vers la prochaine journée</h2>
+          <div class="grille-form">
+            <div><label for="r-matin">Matin à</label><input type="time" id="r-matin" required></div>
+            <div><label for="r-soir">Soir à</label><input type="time" id="r-soir" required></div>
+            <div><label class="case"><input type="checkbox" id="r-pentecote"> Lundi de Pentecôte férié</label></div>
+          </div>
+          <p><button type="submit" class="btn btn-primaire">Enregistrer</button></p>
+        </form>
+        <form class="section carte" id="form-pin">
+          <h2>Changer un code</h2>
+          <div class="grille-form">
+            <div><label for="p-role">Code</label>
+              <select id="p-role"><option value="chauffeur">Chauffeur</option><option value="admin">Administrateur</option></select></div>
+            <div><label for="p-nouveau">Nouveau code (4 à 8 chiffres)</label>
+              <input type="password" id="p-nouveau" inputmode="numeric" pattern="\d{4,8}" maxlength="8" required autocomplete="new-password"></div>
+            <div><button type="submit" class="btn btn-primaire btn-plein">Changer</button></div>
+          </div>
+        </form>
+        <div class="section carte">
+          <h2>Liens</h2>
+          <ul class="liste-simple">
+            <li>Page publique <a class="droite" href="./">ouvrir</a></li>
+            <li>Vue chauffeur <a class="droite" href="chauffeur.html">ouvrir</a></li>
+          </ul>
+          <p><button type="button" class="lien" id="deconnexion">Se déconnecter</button></p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="pied" id="pied-version"></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="dialogue-confirmation" aria-labelledby="confirmation-texte">
+    <p id="confirmation-texte"></p>
+    <div class="actions">
+      <button type="button" class="btn btn-secondaire" id="confirmation-non">Non</button>
+      <button type="button" class="btn btn-danger" id="confirmation-oui">Oui</button>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="commun.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
