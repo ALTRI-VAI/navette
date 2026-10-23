@@ -2,7 +2,7 @@
    Stratégie « réseau d'abord » avec revalidation systématique (cache: 'no-cache') :
    une nouvelle version publiée sur GitHub est visible dès le chargement suivant,
    sans attendre l'expiration du cache du navigateur (10 min sur GitHub Pages). */
-var VERSION = '0.1.1';
+var VERSION = '0.1.2';
 var CACHE = 'navette-' + VERSION;
 var FICHIERS = ['./', 'index.html', 'chauffeur.html', 'style.css?v=' + VERSION, 'commun.js?v=' + VERSION,
   'accueil.js?v=' + VERSION, 'chauffeur.js?v=' + VERSION, 'config.js?v=' + VERSION,

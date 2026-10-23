@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icone.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icone-180.png">
-  <link rel="stylesheet" href="style.css?v=0.1.1">
+  <link rel="stylesheet" href="style.css?v=0.1.2">
 </head>
 <body>
   <header class="entete">
@@ -25,27 +25,19 @@
   <main class="contenu">
     <div id="bandeau" class="bandeau" role="alert" hidden></div>
 
-    <form id="connexion" class="carte connexion" hidden>
-      <h2>Accès chauffeur</h2>
-      <label for="champ-pin">Code</label>
-      <input type="password" id="champ-pin" inputmode="numeric" autocomplete="current-password" maxlength="8">
-      <div class="erreur-champ" id="erreur-pin"></div>
-      <button type="submit" class="btn btn-primaire btn-plein">Valider</button>
-    </form>
-
-    <div id="vue" hidden>
-      <div id="demis" class="demis"></div>
-      <p style="text-align:center;margin-top:24px">
-        <button type="button" class="lien" id="deconnexion">Se déconnecter</button>
-      </p>
+    <div id="vue">
+      <div id="demis" class="demis">
+        <div class="squelette"></div>
+        <div class="squelette"></div>
+      </div>
     </div>
   </main>
 
   <footer class="pied" id="pied-version"></footer>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=0.1.1"></script>
-  <script src="commun.js?v=0.1.1"></script>
-  <script src="chauffeur.js?v=0.1.1"></script>
+  <script src="config.js?v=0.1.2"></script>
+  <script src="commun.js?v=0.1.2"></script>
+  <script src="chauffeur.js?v=0.1.2"></script>
 </body>
 </html>

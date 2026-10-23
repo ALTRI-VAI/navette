@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0a5cad">
   <meta name="robots" content="noindex">
   <link rel="icon" href="icons/icone.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=0.1.1">
+  <link rel="stylesheet" href="style.css?v=0.1.2">
 </head>
 <body>
   <header class="entete">
@@ -98,10 +98,10 @@
           <p><button type="submit" class="btn btn-primaire">Enregistrer</button></p>
         </form>
         <form class="section carte" id="form-pin">
-          <h2>Changer un code</h2>
+          <h2>Changer le code administrateur</h2>
           <div class="grille-form">
             <div><label for="p-role">Code</label>
-              <select id="p-role"><option value="chauffeur">Chauffeur</option><option value="admin">Administrateur</option></select></div>
+              <select id="p-role"><option value="admin">Administrateur</option></select></div>
             <div><label for="p-nouveau">Nouveau code (4 à 8 chiffres)</label>
               <input type="password" id="p-nouveau" inputmode="numeric" pattern="\d{4,8}" maxlength="8" required autocomplete="new-password"></div>
             <div><button type="submit" class="btn btn-primaire btn-plein">Changer</button></div>
@@ -111,7 +111,7 @@
           <h2>Liens</h2>
           <ul class="liste-simple">
             <li>Page publique <a class="droite" href="./">ouvrir</a></li>
-            <li>Vue chauffeur <a class="droite" href="chauffeur.html">ouvrir</a></li>
+            <li>Vue chauffeur (sans code, lien à transmettre au chauffeur) <a class="droite" href="chauffeur.html">ouvrir</a></li>
           </ul>
           <p><button type="button" class="lien" id="deconnexion">Se déconnecter</button></p>
         </div>
@@ -135,8 +135,8 @@
     </div>
   </dialog>
 
-  <script src="config.js?v=0.1.1"></script>
-  <script src="commun.js?v=0.1.1"></script>
-  <script src="admin.js?v=0.1.1"></script>
+  <script src="config.js?v=0.1.2"></script>
+  <script src="commun.js?v=0.1.2"></script>
+  <script src="admin.js?v=0.1.2"></script>
 </body>
 </html>

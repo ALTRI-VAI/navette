@@ -1,33 +1,21 @@
-/* NAVETTE – vue chauffeur (consultation seule) */
+/* NAVETTE – vue chauffeur : consultation seule, sans code (depuis la v0.1.2) */
 (function () {
   'use strict';
   var N = window.Navette;
-  var CLE_PIN = 'navette.pin.chauffeur';
-  var pin = N.stockage.lire(CLE_PIN) || '';
+  var dejaAffiche = false;
 
-  function afficherConnexion(message) {
-    N.el('vue').hidden = true;
-    N.el('connexion').hidden = false;
-    N.el('erreur-pin').textContent = message || '';
-    N.el('champ-pin').value = '';
-    N.el('champ-pin').focus();
-  }
+  // Le code chauffeur n'existe plus : on efface celui qui aurait été retenu sur l'appareil.
+  N.stockage.effacer('navette.pin.chauffeur');
 
-  function charger(silencieux) {
-    if (!pin) { afficherConnexion(); return Promise.resolve(); }
-    return N.api('chauffeur', { pin: pin }).then(function (rep) {
+  function charger() {
+    return N.api('etat').then(function (rep) {
       N.bandeau(null);
-      N.el('connexion').hidden = true;
-      N.el('vue').hidden = false;
       rendre(rep);
+      dejaAffiche = true;
       N.majPied(N.heureLocale());
     }).catch(function (err) {
-      if (/code|essais/i.test(err.message)) {
-        pin = ''; N.stockage.effacer(CLE_PIN);
-        afficherConnexion(err.message);
-      } else if (!silencieux || !N.el('vue').hidden) {
-        N.bandeau(err.message);
-      }
+      N.bandeau(err.message + (dejaAffiche ? ' Les listes affichées peuvent ne pas être à jour.' : ''));
+      if (!dejaAffiche) N.el('demis').innerHTML = '';
     });
   }
 
@@ -46,20 +34,8 @@
     }).join('');
   }
 
-  N.el('connexion').addEventListener('submit', function (e) {
-    e.preventDefault();
-    pin = N.el('champ-pin').value.trim();
-    if (!pin) return;
-    N.stockage.ecrire(CLE_PIN, pin);
-    charger(false);
-  });
-
-  N.el('deconnexion').addEventListener('click', function () {
-    pin = ''; N.stockage.effacer(CLE_PIN); afficherConnexion();
-  });
-
   N.majPied();
-  charger(false);
-  N.actualisationAuto(function (s) { if (pin) charger(s); });
+  charger();
+  N.actualisationAuto(function () { charger(); });
   N.enregistrerSW();
 })();

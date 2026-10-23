@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION_INTERFACE = '0.1.1';
+  var VERSION_INTERFACE = '0.1.2';
   var ACTUALISATION_MS = 30000;
   var cfg0 = window.NAVETTE_CONFIG || {};
   var DELAI_MAX_MS = cfg0.DELAI_MAX_MS || 20000;   // au-delà : « Le serveur ne répond pas »
@@ -27,24 +27,43 @@
     return /^https?:\/\//.test(u);
   }
 
-  function api(action, donnees) {
-    if (!apiConfiguree()) {
-      return Promise.reject(new Error('Application non configurée : adresse du serveur manquante (config.js).'));
-    }
-    var corps = Object.assign({ action: action }, donnees || {});
+  // Actions de simple lecture : rejouées automatiquement si Google répond mal (F34).
+  // Les inscriptions, annulations et actions d'administration ne sont JAMAIS rejouées.
+  var LECTURES = { 'etat': true, 'chauffeur': true, 'admin.donnees': true, 'ping': true };
+  var cfgEssais = (window.NAVETTE_CONFIG || {}).PAUSES_ESSAIS_MS;
+  var PAUSES_ESSAIS_MS = Array.isArray(cfgEssais) ? cfgEssais : [1000, 3000];
+
+  /** Un seul appel au serveur. Une erreur « technique » est marquée erreur.technique = true. */
+  function appelUnique(corps) {
+    var technique = function (message) { var e = new Error(message); e.technique = true; return e; };
     // Corps en texte brut : évite la requête préalable CORS, non gérée par Apps Script.
     return fetch(urlApi(), { method: 'POST', body: JSON.stringify(corps), redirect: 'follow', cache: 'no-store' })
       .then(function (r) {
-        if (!r.ok) throw new Error('Serveur indisponible (' + r.status + ').');
-        return r.json();
+        if (!r.ok) throw technique('Serveur indisponible (' + r.status + ').');
+        return r.json().catch(function () { throw technique('Réponse du serveur illisible.'); });
       }, function () {
-        throw new Error('Pas de connexion au serveur. Vérifiez votre réseau.');
+        throw technique('Pas de connexion au serveur. Vérifiez votre réseau.');
       })
       .then(function (rep) {
         if (rep && rep.version) majVersionServeur(rep.version);
         if (!rep || !rep.ok) throw new Error((rep && rep.erreur) || 'Erreur inconnue.');
         return rep;
       });
+  }
+
+  function api(action, donnees) {
+    if (!apiConfiguree()) {
+      return Promise.reject(new Error('Application non configurée : adresse du serveur manquante (config.js).'));
+    }
+    var corps = Object.assign({ action: action }, donnees || {});
+    var pauses = LECTURES[action] ? PAUSES_ESSAIS_MS : [];
+    var essai = function (n) {
+      return appelUnique(corps).catch(function (err) {
+        if (!err.technique || n >= pauses.length) throw err;
+        return new Promise(function (r) { setTimeout(r, pauses[n]); }).then(function () { return essai(n + 1); });
+      });
+    };
+    return essai(0);
   }
 
   /* ---------- utilitaires ---------- */
