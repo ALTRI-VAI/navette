@@ -6,7 +6,6 @@
   var etat = null;
   var prenom = N.stockage.lire(CLE_PRENOM) || '';
   var apresPrenom = null;
-  var occupe = false;
 
   /* ---------- prénom ---------- */
   function majBonjour() {
@@ -43,7 +42,7 @@
 
   /* ---------- chargement ---------- */
   function charger(silencieux) {
-    if (occupe && silencieux) return Promise.resolve();
+    if (silencieux && N.estOccupe()) return Promise.resolve();
     return N.api('etat').then(function (rep) {
       etat = rep;
       N.bandeau(null);
@@ -93,7 +92,7 @@
     else if (nb >= c.capacite) bouton = '<button type="button" class="btn btn-plein" disabled>Complet</button>';
     else if (monCreneau) bouton = '<button type="button" class="btn btn-plein" disabled>Déjà inscrit(e) à ' + N.formatHeure(monCreneau.heure) + '</button>';
     else bouton = '<button type="button" class="btn btn-plein btn-primaire" data-inscrire="' + N.echapper(c.id) +
-      '" data-demi="' + d.demi + '" data-date="' + d.date + '">S\'inscrire à ' + h + '</button>';
+      '" data-demi="' + d.demi + '" data-date="' + d.date + '" data-heure="' + h + '">S\'inscrire à ' + h + '</button>';
 
     return '<article class="creneau ' + rem.classe + (estMoi ? ' moi' : '') + '" aria-label="Départ ' + h + ', ' + rem.texte + '">' +
       '<div class="cr-tete"><span class="cr-heure">' + h + '</span>' +
@@ -104,20 +103,23 @@
   }
 
   /* ---------- actions ---------- */
+  function apresAction(r) {
+    if (r.ok) {
+      etat = r.rep; rendre(); N.majPied(N.heureLocale());
+      N.toast('✓ ' + r.rep.message);
+    } else {
+      if (!r.delai) N.toast(r.erreur, 'erreur');
+      charger(false);
+    }
+  }
+
   function inscrire(bouton) {
     var donnees = { demi: bouton.dataset.demi, creneauId: bouton.dataset.inscrire, date: bouton.dataset.date };
     var lancer = function () {
-      occupe = true;
-      bouton.disabled = true;
-      bouton.textContent = 'Inscription…';
       donnees.nom = prenom;
-      N.api('inscrire', donnees).then(function (rep) {
-        etat = rep; rendre(); N.majPied(N.heureLocale());
-        N.toast('✓ ' + rep.message);
-      }).catch(function (err) {
-        N.toast(err.message, 'erreur');
-        charger(true);
-      }).then(function () { occupe = false; });
+      N.executer('Inscription de ' + prenom + ' à ' + bouton.dataset.heure + ' en cours…', function () {
+        return N.api('inscrire', donnees);
+      }).then(apresAction);
     };
     if (!prenom) ouvrirPrenom(lancer); else lancer();
   }
@@ -126,15 +128,9 @@
     var nom = bouton.dataset.nom;
     N.confirmer('Êtes-vous sûr de vouloir annuler la réservation de ' + nom + ' ?', 'Oui, annuler').then(function (ok) {
       if (!ok) return;
-      occupe = true;
-      bouton.disabled = true;
-      N.api('annuler', { id: bouton.dataset.annuler }).then(function (rep) {
-        etat = rep; rendre(); N.majPied(N.heureLocale());
-        N.toast(rep.message);
-      }).catch(function (err) {
-        N.toast(err.message, 'erreur');
-        charger(true);
-      }).then(function () { occupe = false; });
+      N.executer('Désinscription de ' + nom + ' en cours…', function () {
+        return N.api('annuler', { id: bouton.dataset.annuler });
+      }).then(apresAction);
     });
   }
 

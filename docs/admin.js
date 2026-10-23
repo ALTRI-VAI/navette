@@ -5,7 +5,6 @@
   var CLE_PIN = 'navette.pin.admin';
   var pin = N.stockage.lire(CLE_PIN) || '';
   var donnees = null;
-  var occupe = false;
   var e = N.echapper;
 
   /* ---------- connexion ---------- */
@@ -35,7 +34,7 @@
     if (silencieux) {
       // Pas d'actualisation automatique pendant une saisie (évite d'effacer le champ).
       var actif = document.activeElement;
-      if (occupe || (actif && /INPUT|SELECT|TEXTAREA/.test(actif.tagName) && N.el('vue').contains(actif))) return Promise.resolve();
+      if (N.estOccupe() || (actif && /INPUT|SELECT|TEXTAREA/.test(actif.tagName) && N.el('vue').contains(actif))) return Promise.resolve();
     }
     return appel('admin.donnees').then(function (rep) {
       donnees = rep;
@@ -49,22 +48,36 @@
     });
   }
 
-  /** Exécute une action puis recharge les données. */
-  function action(nom, extra, bouton, siReussi) {
-    occupe = true;
-    if (bouton) bouton.disabled = true;
-    return appel(nom, extra).then(function (rep) {
-      if (rep.message) N.toast('✓ ' + rep.message);
-      if (siReussi) siReussi(rep);
-      occupe = false;
-      return charger(false).then(function () { return true; });
-    }).catch(function (err) {
-      if (!erreurAcces(err)) N.toast(err.message, 'erreur');
+  /** Recharge les données d'administration et réaffiche tout. */
+  function rafraichir() {
+    return appel('admin.donnees').then(function (rep) {
+      donnees = rep;
+      toutRendre();
+      N.majPied(N.heureLocale());
+    });
+  }
+
+  /**
+   * Exécute une action dans la fenêtre « … en cours » ; la fenêtre reste ouverte
+   * jusqu'à ce que les données soient rechargées, puis affiche « C'est fait ! ».
+   * Renvoie true si l'action a réussi.
+   */
+  function action(nom, extra, texteAttente, siReussi) {
+    return N.executer(texteAttente, function () {
+      return appel(nom, extra).then(function (rep) {
+        if (siReussi) siReussi(rep);
+        return rafraichir().then(function () { return rep; }, function () { return rep; });
+      });
+    }).then(function (r) {
+      if (r.ok) {
+        if (r.rep.message) N.toast('✓ ' + r.rep.message);
+        return true;
+      }
+      if (!erreurAcces({ message: r.erreur })) {
+        if (!r.delai) N.toast(r.erreur, 'erreur');
+        charger(false);
+      }
       return false;
-    }).then(function (reussi) {
-      occupe = false;
-      if (bouton) bouton.disabled = false;
-      return reussi;
     });
   }
 
@@ -101,7 +114,7 @@
               e(i.id) + '" data-nom="' + e(i.nom) + '" aria-label="Retirer ' + e(i.nom) + '">×</button></li>';
           }).join('');
           var ajout = nb < c.capacite
-            ? '<form class="ajout-nom" data-demi="' + d.demi + '" data-creneau="' + e(c.id) + '">' +
+            ? '<form class="ajout-nom" data-demi="' + d.demi + '" data-creneau="' + e(c.id) + '" data-heure="' + N.formatHeure(c.heure) + '">' +
               '<input type="text" maxlength="30" placeholder="Ajouter un prénom" aria-label="Prénom à ajouter à ' + N.formatHeure(c.heure) + '">' +
               '<button type="submit" class="btn btn-primaire btn-petit">Ajouter</button></form>'
             : '';
@@ -116,7 +129,7 @@
     var b = ev.target.closest('button[data-annuler]');
     if (!b) return;
     N.confirmer('Êtes-vous sûr de vouloir annuler la réservation de ' + b.dataset.nom + ' ?', 'Oui, annuler').then(function (ok) {
-      if (ok) action('admin.annuler', { id: b.dataset.annuler }, b);
+      if (ok) action('admin.annuler', { id: b.dataset.annuler }, 'Désinscription de ' + b.dataset.nom + ' en cours…');
     });
   });
   N.el('demis').addEventListener('submit', function (ev) {
@@ -124,7 +137,8 @@
     var f = ev.target;
     var nom = f.querySelector('input').value.trim();
     if (!nom) return;
-    action('admin.inscrire', { demi: f.dataset.demi, creneauId: f.dataset.creneau, nom: nom }, f.querySelector('button'));
+    action('admin.inscrire', { demi: f.dataset.demi, creneauId: f.dataset.creneau, nom: nom },
+      'Inscription de ' + nom + ' à ' + f.dataset.heure + ' en cours…');
   });
 
   /* ---------- créneaux ---------- */
@@ -144,13 +158,13 @@
     var champs = f.querySelectorAll('input');
     action('admin.creneau', { creneau: {
       id: f.dataset.id, demi: f.dataset.demi, heure: champs[0].value, capacite: champs[1].value, actif: champs[2].checked
-    } }, f.querySelector('button'));
+    } }, 'Enregistrement du créneau en cours…');
   });
   N.el('form-creneau').addEventListener('submit', function (ev) {
     ev.preventDefault();
     action('admin.creneau', { creneau: {
       demi: N.el('nc-demi').value, heure: N.el('nc-heure').value, capacite: N.el('nc-cap').value, actif: true
-    } }, ev.target.querySelector('button'));
+    } }, 'Ajout du créneau en cours…');
   });
 
   /* ---------- fermetures ---------- */
@@ -169,13 +183,13 @@
     var b = ev.target.closest('button[data-supprimer]');
     if (!b) return;
     N.confirmer('Rouvrir la journée du ' + b.dataset.libelle + ' ?', 'Oui, rouvrir').then(function (ok) {
-      if (ok) action('admin.fermeture.supprimer', { date: b.dataset.supprimer }, b);
+      if (ok) action('admin.fermeture.supprimer', { date: b.dataset.supprimer }, 'Réouverture de la journée en cours…');
     });
   });
   N.el('form-fermeture').addEventListener('submit', function (ev) {
     ev.preventDefault();
     action('admin.fermeture.ajouter', { date: N.el('nf-date').value, motif: N.el('nf-motif').value },
-      ev.target.querySelector('button')).then(function (ok) { if (ok) N.el('nf-motif').value = ''; });
+      'Ajout de la fermeture en cours…').then(function (ok) { if (ok) N.el('nf-motif').value = ''; });
   });
 
   /* ---------- statistiques ---------- */
@@ -277,12 +291,12 @@
     action('admin.reglages', { reglages: {
       BASCULE_MATIN: N.el('r-matin').value, BASCULE_SOIR: N.el('r-soir').value,
       LUNDI_PENTECOTE_FERIE: N.el('r-pentecote').checked ? 'OUI' : 'NON'
-    } }, ev.target.querySelector('button'));
+    } }, 'Enregistrement des réglages en cours…');
   });
   N.el('form-pin').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var role = N.el('p-role').value, nouveau = N.el('p-nouveau').value;
-    action('admin.pin', { role: role, nouveau: nouveau }, ev.target.querySelector('button'), function () {
+    action('admin.pin', { role: role, nouveau: nouveau }, 'Changement du code en cours…', function () {
       if (role === 'admin') { pin = nouveau; N.stockage.ecrire(CLE_PIN, pin); }
       N.el('p-nouveau').value = '';
     });

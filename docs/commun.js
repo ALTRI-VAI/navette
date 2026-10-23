@@ -2,8 +2,12 @@
 (function () {
   'use strict';
 
-  var VERSION_INTERFACE = '0.1.0';
+  var VERSION_INTERFACE = '0.1.1';
   var ACTUALISATION_MS = 30000;
+  var cfg0 = window.NAVETTE_CONFIG || {};
+  var DELAI_MAX_MS = cfg0.DELAI_MAX_MS || 20000;   // au-delà : « Le serveur ne répond pas »
+  var DUREE_SUCCES_MS = cfg0.DUREE_SUCCES_MS || 1000; // affichage de « C'est fait ! »
+  var operationEnCours = false;
 
   /* ---------- stockage local (protégé : peut être indisponible) ---------- */
   var stockage = {
@@ -29,7 +33,7 @@
     }
     var corps = Object.assign({ action: action }, donnees || {});
     // Corps en texte brut : évite la requête préalable CORS, non gérée par Apps Script.
-    return fetch(urlApi(), { method: 'POST', body: JSON.stringify(corps), redirect: 'follow' })
+    return fetch(urlApi(), { method: 'POST', body: JSON.stringify(corps), redirect: 'follow', cache: 'no-store' })
       .then(function (r) {
         if (!r.ok) throw new Error('Serveur indisponible (' + r.status + ').');
         return r.json();
@@ -95,20 +99,87 @@
     else { b.hidden = true; }
   }
 
-  /* ---------- confirmation ---------- */
+  /* ---------- fenêtre de confirmation / attente ----------
+     Une seule fenêtre (#dialogue-confirmation) avec trois états :
+     question (texte + Non/Oui), attente (roue + texte), résultat (succès ou échec). */
+  function attendre(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function etatFenetre(mode, texte) {
+    var question = mode === 'question';
+    el('confirmation-texte').hidden = !question;
+    el('confirmation-actions').hidden = !question;
+    var a = el('confirmation-attente');
+    a.hidden = question;
+    a.className = 'attente ' + mode;
+    el('attente-texte').textContent = question ? '' : texte;
+  }
+
+  function ouvrirFenetre() {
+    var d = el('dialogue-confirmation');
+    if (!d.open) d.showModal();
+  }
+
+  function fermerFenetre() {
+    var d = el('dialogue-confirmation');
+    if (d.open) d.close();
+  }
+
+  /** Pose une question. Non → ferme la fenêtre (false). Oui → la fenêtre reste ouverte (true). */
   function confirmer(texte, libelleOui) {
     return new Promise(function (resoudre) {
       var d = el('dialogue-confirmation');
       el('confirmation-texte').textContent = texte;
       el('confirmation-oui').textContent = libelleOui || 'Oui';
-      var fermer = function (r) { d.close(); resoudre(r); };
-      el('confirmation-oui').onclick = function () { fermer(true); };
-      el('confirmation-non').onclick = function () { fermer(false); };
-      d.oncancel = function (e) { e.preventDefault(); fermer(false); };
-      d.showModal();
+      etatFenetre('question');
+      el('confirmation-oui').onclick = function () { resoudre(true); };
+      el('confirmation-non').onclick = function () { fermerFenetre(); resoudre(false); };
+      d.oncancel = function (e) { e.preventDefault(); fermerFenetre(); resoudre(false); };
+      ouvrirFenetre();
       el('confirmation-non').focus();
     });
   }
+
+  /**
+   * Exécute une action serveur en affichant « … en cours » dans la fenêtre.
+   * Résultat : { ok: true, rep } ou { ok: false, erreur, delai }.
+   * Succès : « C'est fait ! » pendant 1 s. Délai dépassé : message puis fermeture.
+   */
+  function executer(texteAttente, fonction) {
+    operationEnCours = true;
+    var d = el('dialogue-confirmation');
+    etatFenetre('attente', texteAttente);
+    d.oncancel = function (e) { e.preventDefault(); }; // pas de fermeture par Échap pendant l'attente
+    ouvrirFenetre();
+    var minuteur;
+    var delai = new Promise(function (_, rejeter) {
+      minuteur = setTimeout(function () {
+        var e = new Error('Le serveur ne répond pas. La liste va être rechargée.');
+        e.delai = true;
+        rejeter(e);
+      }, DELAI_MAX_MS);
+    });
+    var fin = function (resultat, pause) {
+      return attendre(pause).then(function () {
+        fermerFenetre();
+        operationEnCours = false;
+        return resultat;
+      });
+    };
+    return Promise.race([Promise.resolve().then(fonction), delai]).then(function (rep) {
+      clearTimeout(minuteur);
+      etatFenetre('succes', 'C\'est fait !');
+      return fin({ ok: true, rep: rep }, DUREE_SUCCES_MS);
+    }, function (err) {
+      clearTimeout(minuteur);
+      if (err && err.delai) {
+        etatFenetre('echec', err.message);
+        return fin({ ok: false, erreur: err.message, delai: true }, 2500);
+      }
+      return fin({ ok: false, erreur: (err && err.message) || 'Erreur inconnue.' }, 0);
+    });
+  }
+
+  function estOccupe() { return operationEnCours; }
 
   /* ---------- actualisation périodique ---------- */
   function actualisationAuto(fonction) {
@@ -144,18 +215,32 @@
     return '<div class="sieges" aria-hidden="true">' + h + '</div>';
   }
 
-  /** Enregistre le service worker (application installable). */
+  /** Enregistre le service worker (application installable + mises à jour immédiates). */
   function enregistrerSW() {
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
-      navigator.serviceWorker.register('sw.js').catch(function () { /* facultatif */ });
-    }
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+    var avaitControleur = !!navigator.serviceWorker.controller;
+    var recharge = false;
+    // Nouvelle version installée : on recharge une fois, dès qu'aucune action n'est en cours.
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!avaitControleur || recharge) return;
+      recharge = true;
+      var essayer = function () {
+        if (operationEnCours || document.querySelector('dialog[open]')) { setTimeout(essayer, 1000); return; }
+        location.reload();
+      };
+      essayer();
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) reg.update().catch(function () {}); });
+    }).catch(function () { /* facultatif */ });
   }
 
   window.Navette = {
     VERSION_INTERFACE: VERSION_INTERFACE,
     stockage: stockage, api: api, apiConfiguree: apiConfiguree,
     echapper: echapper, formatHeure: formatHeure, cleNom: cleNom, el: el,
-    toast: toast, bandeau: bandeau, confirmer: confirmer, majPied: majPied,
+    toast: toast, bandeau: bandeau, confirmer: confirmer, executer: executer, estOccupe: estOccupe, majPied: majPied,
     actualisationAuto: actualisationAuto, heureLocale: heureLocale,
     etatRemplissage: etatRemplissage, sieges: sieges, enregistrerSW: enregistrerSW
   };

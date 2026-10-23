@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0a5cad">
   <meta name="robots" content="noindex">
   <link rel="icon" href="icons/icone.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=0.1.1">
 </head>
 <body>
   <header class="entete">
@@ -122,16 +122,21 @@
   <footer class="pied" id="pied-version"></footer>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <dialog id="dialogue-confirmation" aria-labelledby="confirmation-texte">
+  <dialog id="dialogue-confirmation" aria-labelledby="confirmation-texte" aria-describedby="attente-texte">
     <p id="confirmation-texte"></p>
-    <div class="actions">
+    <div class="actions" id="confirmation-actions">
       <button type="button" class="btn btn-secondaire" id="confirmation-non">Non</button>
       <button type="button" class="btn btn-danger" id="confirmation-oui">Oui</button>
     </div>
+    <div class="attente" id="confirmation-attente" role="status" aria-live="polite" hidden>
+      <span class="roue" aria-hidden="true"></span>
+      <span class="coche" aria-hidden="true">✓</span>
+      <span id="attente-texte"></span>
+    </div>
   </dialog>
 
-  <script src="config.js"></script>
-  <script src="commun.js"></script>
-  <script src="admin.js"></script>
+  <script src="config.js?v=0.1.1"></script>
+  <script src="commun.js?v=0.1.1"></script>
+  <script src="admin.js?v=0.1.1"></script>
 </body>
 </html>
